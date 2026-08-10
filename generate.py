@@ -1,164 +1,325 @@
-import base64
 import json
-import re
 import urllib.request
+import urllib.parse
+import base64
+import re
 from pathlib import Path
+from datetime import datetime, timezone
 
-ROOT = Path(__file__).resolve().parent
 
-SOURCES_FILE = ROOT / "sources.json"
-OUTPUT_FILE = ROOT / "subscription.txt"
-REPORT_FILE = ROOT / "generation_report.json"
+BASE_DIR = Path(__file__).resolve().parent
 
-TIMEOUT = 20
+SOURCES_FILE = BASE_DIR / "sources.json"
+OUTPUT_FILE = BASE_DIR / "subscription.txt"
+REPORT_FILE = BASE_DIR / "generation_report.json"
 
-PREFIXES = (
-    "vmess://",
+
+# Протоколы, которые считаем конфигурациями
+SUPPORTED_PREFIXES = (
     "vless://",
+    "vmess://",
     "trojan://",
     "ss://",
-    "ssr://",
+    "ssconf://",
     "hysteria://",
     "hysteria2://",
     "tuic://",
     "socks://",
-    "socks5://"
+    "http://",
+    "https://",
 )
 
 
 def download(url):
+    """Загрузка содержимого подписки."""
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "Mozilla/5.0"}
+        headers={
+            "User-Agent": "Mozilla/5.0"
+        }
     )
 
-    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-        return response.read()
+    with urllib.request.urlopen(request, timeout=30) as response:
+        data = response.read()
+
+    return data
 
 
-def decode_base64(text):
+def decode_subscription(data):
+    """
+    Пытается определить обычный текст или Base64-подписку.
+    Возвращает список строк.
+    """
+
+    text = data.decode("utf-8", errors="ignore")
+
+    # Сначала проверяем обычный текст.
+    lines = [
+        line.strip()
+        for line in text.splitlines()
+        if line.strip()
+    ]
+
+    if any(
+        line.lower().startswith(SUPPORTED_PREFIXES)
+        for line in lines
+    ):
+        return lines
+
+    # Иногда подписки приходят одной Base64-строкой.
     compact = re.sub(r"\s+", "", text)
 
-    if not compact:
-        return None
-
     try:
+        # Добавляем недостающий padding.
         padding = "=" * (-len(compact) % 4)
 
         decoded = base64.b64decode(
-            compact + padding
-        ).decode("utf-8", errors="ignore")
+            compact + padding,
+            validate=False
+        )
 
-        if any(prefix in decoded for prefix in PREFIXES):
-            return decoded
+        decoded_text = decoded.decode(
+            "utf-8",
+            errors="ignore"
+        )
+
+        decoded_lines = [
+            line.strip()
+            for line in decoded_text.splitlines()
+            if line.strip()
+        ]
+
+        if any(
+            line.lower().startswith(SUPPORTED_PREFIXES)
+            for line in decoded_lines
+        ):
+            return decoded_lines
 
     except Exception:
         pass
 
-    return None
+    return lines
 
 
-def extract_nodes(data):
-    text = data.decode(
-        "utf-8",
-        errors="ignore"
-    )
+def has_name(config):
+    """
+    Проверяет, есть ли у конфигурации название после #.
+    """
 
-    decoded = decode_base64(text)
+    try:
+        fragment = urllib.parse.urlsplit(config).fragment
 
-    if decoded:
-        text += "\n" + decoded
+        if fragment.strip():
+            return True
+    except Exception:
+        pass
 
-    result = []
-    seen = set()
+    # Для некоторых нестандартных URI
+    if "#" in config:
+        name = config.split("#", 1)[1].strip()
 
-    for line in text.splitlines():
+        if name:
+            return True
 
-        line = line.strip()
+    return False
 
-        if not line:
-            continue
 
-        for token in re.split(r"\s+", line):
+def add_name(config, number):
+    """
+    Если у конфигурации нет названия,
+    добавляет безопасное название.
+    """
 
-            if token.startswith(PREFIXES):
+    if has_name(config):
+        return config
 
-                if token not in seen:
-                    seen.add(token)
-                    result.append(token)
+    # Не изменяем саму конфигурацию,
+    # только добавляем fragment с названием.
+    return f"{config}#Сервер {number}"
 
-    return result
+
+def load_sources():
+    """Читает sources.json."""
+
+    with open(
+        SOURCES_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
+        data = json.load(file)
+
+    if isinstance(data, dict):
+        # Поддержка формата:
+        # {"sources": [...]}
+        sources = data.get("sources", [])
+
+    elif isinstance(data, list):
+        sources = data
+
+    else:
+        raise ValueError(
+            "sources.json должен содержать список источников"
+        )
+
+    return sources
 
 
 def main():
 
-    config = json.loads(
-        SOURCES_FILE.read_text(
-            encoding="utf-8"
+    started = datetime.now(timezone.utc)
+
+    sources = load_sources()
+
+    all_configs = []
+    report_sources = []
+
+    server_number = 1
+
+    for source_index, source in enumerate(
+        sources,
+        start=1
+    ):
+
+        name = source.get(
+            "name",
+            f"VPN {source_index}"
         )
-    )
 
-    all_nodes = []
-    report = []
+        url = source.get("url")
 
-    for source in config["subscriptions"]:
-
-        name = source["name"]
-        url = source["url"]
-
-        item = {
+        status = {
             "name": name,
             "url": url,
-            "status": "unknown",
-            "nodes": 0
+            "status": "error",
+            "configs": 0,
+            "error": None,
         }
 
+        if not url:
+            status["error"] = "URL отсутствует"
+            report_sources.append(status)
+            continue
+
         try:
+            raw_data = download(url)
 
-            data = download(url)
-            nodes = extract_nodes(data)
+            configs = decode_subscription(raw_data)
 
-            item["nodes"] = len(nodes)
+            valid_configs = []
 
-            if nodes:
-                item["status"] = "working"
-            else:
-                item["status"] = "no_nodes_found"
+            for config in configs:
 
-            all_nodes.extend(nodes)
+                config = config.strip()
+
+                if not config:
+                    continue
+
+                # Игнорируем мусор, который не является конфигурацией.
+                if not config.lower().startswith(
+                    SUPPORTED_PREFIXES
+                ):
+                    continue
+
+                # Добавляем название только если его нет.
+                config = add_name(
+                    config,
+                    server_number
+                )
+
+                valid_configs.append(config)
+
+                all_configs.append(config)
+
+                server_number += 1
+
+            status["status"] = "ok"
+            status["configs"] = len(valid_configs)
 
         except Exception as error:
 
-            item["status"] = "error"
-            item["error"] = str(error)
+            status["error"] = str(error)
 
-        report.append(item)
+        report_sources.append(status)
 
-    unique_nodes = list(
-        dict.fromkeys(all_nodes)
+    # Убираем только полностью пустые строки.
+    # Дубликаты НЕ удаляем специально.
+    all_configs = [
+        config
+        for config in all_configs
+        if config.strip()
+    ]
+
+    # Описание в начале подписки.
+    description = [
+        "VPN Key",
+        "",
+        "Агрегированная подписка с конфигурациями из нескольких источников.",
+        "",
+        "Если какая-то из подписок не работает, напишите в Telegram: @Tesler09785",
+        "Мы проверим источник и при необходимости удалим его.",
+        "",
+        f"Конфигураций: {len(all_configs)}",
+        "",
+    ]
+
+    output = (
+        "\n".join(description)
+        + "\n".join(all_configs)
+        + "\n"
     )
 
-    OUTPUT_FILE.write_text(
-        "\n".join(unique_nodes) +
-        ("\n" if unique_nodes else ""),
+    with open(
+        OUTPUT_FILE,
+        "w",
         encoding="utf-8"
-    )
+    ) as file:
+        file.write(output)
 
-    REPORT_FILE.write_text(
-        json.dumps(
-            {
-                "description": config["description"],
-                "sources": report,
-                "total_nodes": len(unique_nodes)
-            },
+    finished = datetime.now(timezone.utc)
+
+    report = {
+        "generated_at": finished.isoformat(),
+        "duration_seconds": (
+            finished - started
+        ).total_seconds(),
+        "sources_total": len(sources),
+        "sources_success": sum(
+            1
+            for source in report_sources
+            if source["status"] == "ok"
+        ),
+        "sources_failed": sum(
+            1
+            for source in report_sources
+            if source["status"] == "error"
+        ),
+        "configs_total": len(all_configs),
+        "duplicates_removed": 0,
+        "traffic": {
+            "available": False,
+            "note": (
+                "Трафик не выдумывается. "
+                "Он показывается только если "
+                "его предоставляет источник."
+            )
+        },
+        "sources": report_sources,
+    }
+
+    with open(
+        REPORT_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+        json.dump(
+            report,
+            file,
             ensure_ascii=False,
             indent=2
-        ),
-        encoding="utf-8"
-    )
+        )
 
     print(
-        f"Готово. Серверов собрано: {len(unique_nodes)}"
+        f"Готово. Конфигураций: {len(all_configs)}"
     )
 
 
