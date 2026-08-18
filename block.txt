@@ -1,5 +1,5 @@
 #hide-settings: true
-#profile-title: Ultimate  VPN
+#profile-title: Подписка заблокирована 🚫
 #profile-update-interval: 3
 #subscription-userinfo: expire=99999999999; total=10995116277760; used=0
 
