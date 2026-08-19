@@ -6,5 +6,129 @@
 vless://0.0@733:444?encryption=none&security=reality&type=httpupgrade&path=%2F#%E2%8F%B3%20%D0%9F%D0%BE%D0%B4%D0%BF%D0%B8%D1%81%D0%BA%D0%B0%20%D0%B7%D0%B0%D0%BA%D0%BE%D0%BD%D1%87%D0%B8%D0%BB%D0%B0%D1%81%D1%8C
 vless://0.0@733:444?encryption=none&security=reality&type=httpupgrade&path=%2F#%D0%9F%D1%80%D0%BE%D0%B4%D0%BB%D0%B8%D1%82%D0%B5%20%D0%BF%D0%BE%D0%B4%D0%BF%D0%B8%D1%81%D0%BA%D1%83
 vless://0.0@733:444?encryption=none&security=reality&type=httpupgrade&path=%2F#%40UltimateVPNrobot
-vless://c04bf2df-2b7f-44da-a893-3792d3910fd8@vl01.skorostnet.space:13868?flow=xtls-rprx-vision&encryption=none&security=reality&sni=amd.com&fp=qq&pbk=qFHvK-8mR8GhmykivRP_WIgys1NK_-DqQJAhOJaWVW4&sid=e852dc&type=tcp&headerType=none#%F0%9F%87%AC%F0%9F%87%A7%20%D0%94%D0%BE%D1%81%D1%82%D1%83%D0%BF%20%D0%BA%20Telegram
+{
+  "dns": {
+    "servers": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "queryStrategy": "UseIPv4"
+  },
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "domain": [
+          "geosite:telegram",
+          "geosite:whatsapp",
+          "full:cloudflare-dns.com",
+          "full:dns.google"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "type": "field",
+        "ip": [
+          "geoip:telegram",
+          "1.1.1.1",
+          "1.0.0.1",
+          "8.8.8.8",
+          "8.8.4.4"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "type": "field",
+        "network": "tcp,udp",
+        "outboundTag": "direct"
+      }
+    ],
+    "domainMatcher": "hybrid",
+    "domainStrategy": "AsIs"
+  },
+  "inbounds": [
+    {
+      "tag": "socks",
+      "port": 10808,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": {
+        "udp": true,
+        "auth": "noauth"
+      },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": false,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ]
+      }
+    },
+    {
+      "tag": "http",
+      "port": 10809,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "settings": {
+        "allowTransparent": false
+      },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": false,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "vl01.skorostnet.space",
+            "port": 13868,
+            "users": [
+              {
+                "id": "c04bf2df-2b7f-44da-a893-3792d3910fd8",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "fingerprint": "qq",
+          "serverName": "amd.com",
+          "publicKey": "qFHvK-8mR8GhmykivRP_WIgys1NK_-DqQJAhOJaWVW4",
+          "shortId": "e852dc",
+          "spiderX": ""
+        }
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom"
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole"
+    }
+  ],
+  "remarks": "🇬🇧 Доступ к Telegram",
+  "meta": {
+    "serverDescription": "Json"
+  }
+}
 vless://be52256a-8a66-43e4-806a-d9ea12c8c8a5@31.76.110.77:443?flow=xtls-rprx-vision&encryption=none&security=reality&sni=sashamat.lol&fp=firefox&pbk=geUN_titQXzwDvVWo91qamQpHSwr8nWnfp-KouxCEHY&sid=40ca6d7b58388812&spx=%2F&type=tcp&headerType=none#%F0%9F%87%B3%F0%9F%87%B1%20%D0%9D%D0%B8%D0%B4%D0%B5%D1%80%D0%BB%D0%B0%D0%BD%D0%B4%D1%8B%20%7C%20%D0%91%D0%B5%D1%81%D0%BF%D0%BB%D0%B0%D1%82%D0%BD%D1%8B%D0%B9
