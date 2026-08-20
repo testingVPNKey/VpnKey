@@ -1,5 +1,5 @@
 #hide-settings: true
-# announce: base64:8J+lrSDQl9CwINGB0LLQvtCx0L7QtNGDINCyINC40L3RgtC10YDQvdC10YLQtSDimqHvuI8K8J+ThSDQktGA0LXQvNGPINC+0LHQvdC+0LLQu9C10L3QuNGPINGB0LXRgNCy0LXRgNC+0LI6IDE3OjIxIDIwLjA4LjIwMjYg8J+lrQrinIUg0JrQvtC70LjRh9C10YHRgtCy0L4g0YHQtdGA0LLQtdGA0L7QsjogNTQg4pqZ77iPCvCfp5HigI3wn5K7ICNmc29jaWV0eSAj0KDQmtCfICNpZ2FyZWNrIPCflKc=
+# announce: base64:aHR0cHM6Ly91bHRpbWF0ZXZwbmJvdC50YW55YXl1cnlpLndvcmtlcnMuZGV2L3N1Yi8=
 #profile-title: Ultimate  VPN
 #profile-update-interval: 1
 #profile-web-page-url: https://t.me/UltimateVpn2
