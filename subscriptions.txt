@@ -1,5 +1,6 @@
-#hide-settings: true
-# announce: base64:aHR0cHM6Ly91bHRpbWF0ZXZwbmJvdC50YW55YXl1cnlpLndvcmtlcnMuZGV2L3N1Yi8=
+#hide-settings: 1
+#subscription-userinfo: upload=0; download=0; total=1073741824000; expire=
+#support-url: https://t.me/UltimateVPNrobot
 #profile-title: Ultimate  VPN
 #profile-update-interval: 1
 #profile-web-page-url: https://t.me/UltimateVpn2
