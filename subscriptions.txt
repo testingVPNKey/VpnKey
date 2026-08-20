@@ -1,4 +1,4 @@
-expire=UNIX_TIMESTAMP
+const expire = Math.floor(new Date(expireDate).getTime() / 1000);
 #hide-settings: 1
 #subscription-userinfo: upload=0; download=0; total=-0; 
 #support-url: https://t.me/UltimateVPNrobot
