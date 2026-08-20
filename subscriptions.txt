@@ -1,6 +1,6 @@
+expire=UNIX_TIMESTAMP
 #hide-settings: 1
 #subscription-userinfo: upload=0; download=0; total=-0; 
-expire=UNIX_TIMESTAMP
 #support-url: https://t.me/UltimateVPNrobot
 #profile-title: Ultimate  VPN
 #profile-update-interval: 1
