@@ -1,6 +1,6 @@
 
 #hide-settings: 1
-#subscription-userinfo: upload=0; download=0; total=-0; 
+#subscription-userinfo: upload=0; download=0; total=-0; expire=user_total
 #support-url: https://t.me/UltimateVPNrobot
 #profile-title: Ultimate  VPN
 #profile-update-interval: 1
